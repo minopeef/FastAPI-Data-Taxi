@@ -1,105 +1,246 @@
-<div align="center">
-    <h2>Real-World ML</h2>
-    <h1>Build and deploy a professional REST API to Kubernetes with <a href="https://gimlet.io">Gimlet</a> 🚀</h1>
-    <!-- <img src="./media/kubernetes_cluster.gif" width='600' /> -->
-</div>
+# FastAPI Data Taxi API
 
-<div align="center">
-  <a href="https://www.youtube.com/watch?v=3rDMQLE0DKA">
-    <img src="media/yt_cover.png" alt="Deploy to Kubernetes with Gimlet" style="width:100%;">
-    <p>Click here to watch the video 🎬</p>
-  </a>
-</div>
+A production-ready REST API built with FastAPI that serves historical NYC taxi trip data. The API retrieves data from NYC Taxi and Limousine Commission parquet files and makes it accessible through a RESTful interface.
 
+## Project Overview
 
-#### Table of contents
-* [Our goal 🎯](#our-goal)
-* [How to run the API locally? 🏃](#how-to-run-the-api-locally)
-* [How to deploy the API to Kubernetes with Gimlet? 🚀](#how-to-deploy-the-api-to-kubernetes-with-gimlet)
-* [How to monitor our API with Elasticsearch and Kibana? 🔎](#how-to-monitor-our-api-with-elasticsearch-and-kibana)
-* [See it in action 🎬](#see-it-in-action)
-* [Wanna learn more real-world ML? 🧠](#wanna-learn-more-real-world-ml)
+This project provides a REST API endpoint to query historical taxi trip data from New York City. The data is stored in monthly parquet files and is automatically downloaded and cached when needed. The API supports pagination and filtering by timestamp.
 
-## Our goal
+## Features
 
-Let’s **build** and **deploy** a production-ready REST API that can serve data on historical taxi rides in NYC.
+- RESTful API built with FastAPI
+- Automatic download and caching of NYC taxi trip data parquet files
+- Query trips by timestamp with configurable result limits
+- Health check endpoint for monitoring
+- Request timing middleware with Elasticsearch integration
+- Docker support with multiple build strategies
+- Comprehensive testing suite
+- Production-ready deployment configuration
 
-The original data is stored in one-month parquet files [on this website](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page), and our goal is to make it easily accessible to the WORLD through a REST API.
+## API Endpoints
 
+### GET /health
 
-## How to run the API locally?
+Health check endpoint that returns the API status.
 
-Git clone this repository, cd into the root directory of the project and then run the following commands using make.
+**Response:**
+```json
+{
+  "status": "Healthy!!!"
+}
+```
 
-1. Install [Python Poetry](https://python-poetry.org/docs/#installation) (if necessary)
-and create an isolated virtual environmnet for development purposes.
-    ```
-    $ make install
-    ```
+### GET /trips
 
-2. Test, build and run the dockerized REST API with
-    ```
-    $ make all
-    ```
+Retrieves taxi trips starting from a specified timestamp.
 
-3. Check the API is up and running locally, and that you can connect to it
-    ```
-    $ make health-check-local
-    ```
+**Query Parameters:**
+- `from_ms` (required): Unix timestamp in milliseconds to start the search from
+- `n_results` (optional): Maximum number of results to return (default: 100)
 
-4. Send a sample request to the local API
-    ```
-    $ make sample-request-local
-    ```
+**Response:**
+```json
+{
+  "trips": [
+    {
+      "tpep_pickup_datetime": "2023-01-24T10:30:00",
+      "tpep_dropoff_datetime": "2023-01-24T10:45:00",
+      "trip_distance": 2.5,
+      "fare_amount": 12.50
+    }
+  ],
+  "next_from_ms": 1674561817000,
+  "message": "Success. Returned 100 trips."
+}
+```
 
-Good job. The API is up and running locally. However, until you don’t deploy it to a production environment, and make it accessible to
+## Project Structure
 
-* your clients 💁🏻‍♀️
-* your colleagues 👨🏻‍💼
-* or the whole world 🌏
+```
+.
+├── src/
+│   ├── api.py              # FastAPI application and route handlers
+│   ├── backend.py          # Core business logic for trip data retrieval
+│   ├── config.py           # Configuration settings
+│   ├── middleware.py       # Request timing and Elasticsearch logging middleware
+│   └── utils.py            # Utility functions
+├── tests/
+│   └── test_read_parquet.py  # Unit tests
+├── docker-compose.yml      # Elasticsearch and Kibana services
+├── Dockerfile.naive        # Basic Docker build
+├── Dockerfile.1stage       # Single-stage Docker build
+├── Dockerfile.2stage       # Multi-stage Docker build
+├── Makefile                # Build and deployment commands
+├── pyproject.toml          # Poetry dependencies and configuration
+└── README.md               # This file
+```
 
-your real-world impact is **ZERO**.
+## Prerequisites
 
-Let me show you how to deploy this API to a production Kubernetes cluster.
+- Python 3.10 or higher
+- Poetry (Python dependency management)
+- Docker and Docker Compose (for containerized deployment)
+- Make (for using Makefile commands)
 
+## Installation
 
-> **What is Kubernetes? ☸📦** 
->
-> Kubernetes is an open-source container orchestration platform that automates the deployment, scaling, and management of your Dockerized apps
->
-> It is currently the most widely used container orchestration platform in the world, and it has become the de facto standard due to its robust features, large community support, and backing from major tech companies.
+1. Clone this repository and navigate to the project root directory.
 
-## How to deploy the API to Kubernetes with Gimlet?
+2. Install Python Poetry if you haven't already. Poetry is used for dependency management and virtual environment creation.
 
-[Gimlet](https://gimlet.io/) is a tool that helps you quickly deploy your apps to ANY Kubernetes cluster.
+3. Install project dependencies and create a virtual environment:
+   ```
+   make install
+   ```
 
-- You can do it entirely from the Gimlet UI, as explained in this article.
+   This command will:
+   - Download and install Poetry
+   - Create a Python 3.10 virtual environment
+   - Install all project dependencies
 
-or
+## Running the API Locally
 
-- You can adjust the [gimlet manifest in this repository](https://github.com/Paulescu/taxi-data-api-python/blob/main/.gimlet/electric-paper-taxi-data-api-python.yaml), to automatically deploy your code changes to the main branch.
+### Development Mode
 
-## How to monitor our API with Elasticsearch and Kibana?
+Run the API in development mode with auto-reload:
+```
+make run-dev
+```
 
-These are the steps:
+The API will be available at `http://localhost:8095` (or the port specified in the Makefile).
 
-1. Spin up Elasticsearch and Kibana with the docker compose
-2. Add middleware to FastAPI app
-3. Build a dashboard with Kibana
+### Docker Mode
 
-<img src="./media/kibana.gif" width='600' />
+Build and run the API using Docker:
+```
+make all
+```
 
-## See it in action
+This command will:
+- Run linting and formatting checks
+- Execute tests
+- Build the Docker image (multi-stage build)
+- Run the containerized API
 
-[👉🏽 Click here to try the API](https://paulescu-taxi-data-api-python-ayolbhnl.gimlet.app/trips?from_ms=1674561817000&n_results=100)
+### Health Check
 
+Verify the API is running:
+```
+make health-check-local
+```
 
-## Wanna learn more real-world ML?
+### Sample Request
 
-Join more than 19k builders to the [**Real-World ML Newsletter**](https://www.realworldml.net/subscribe). Every Saturday morning.
+Test the API with a sample request:
+```
+make sample-request-local
+```
 
-### [👉🏽 Click here to subscribe for FREE](https://www.realworldml.net/subscribe)
+## Configuration
 
-### [**👉🏽 My live courses on Real World ML**](https://www.realworldml.net/courses)
+### Environment Variables
 
+- `CACHE_DIR`: Directory path for caching parquet files (default: `/tmp/taxi-data-api-python/`)
+- `ELASTICSEARCH_HOST`: Elasticsearch host URL (default: `http://localhost:9200`)
+- `ELASTICSEARCH_INDEX`: Elasticsearch index name (default: `taxi_data_api`)
+- `PORT`: Port number for the API server (default: `8095`)
 
+## Monitoring with Elasticsearch and Kibana
+
+The API includes middleware that logs request timing data to Elasticsearch. To set up monitoring:
+
+1. Start Elasticsearch and Kibana services:
+   ```
+   make start-infra
+   ```
+
+2. Access Kibana dashboard at `http://localhost:5601`
+
+3. The middleware automatically logs:
+   - Endpoint path
+   - HTTP method
+   - Process time (response time)
+   - Timestamp
+
+4. Stop the infrastructure services:
+   ```
+   make stop-infra
+   ```
+
+## Testing
+
+Run the test suite:
+```
+make test
+```
+
+The tests verify that parquet files can be read correctly and return valid data.
+
+## Code Quality
+
+### Linting
+
+Check and fix code style issues:
+```
+make lint
+```
+
+### Formatting
+
+Format code according to project standards:
+```
+make format
+```
+
+## Docker Build Strategies
+
+The project includes three Docker build strategies:
+
+1. **Naive Build** (`Dockerfile.naive`): Basic Docker build without optimization
+2. **Single-Stage Build** (`Dockerfile.1stage`): Optimized single-stage build
+3. **Multi-Stage Build** (`Dockerfile.2stage`): Production-ready multi-stage build (default)
+
+Compare image sizes:
+```
+make check-image-sizes
+```
+
+## Data Source
+
+The API retrieves data from the NYC Taxi and Limousine Commission (TLC) Trip Record Data. The data is stored in monthly parquet files and is automatically downloaded from the official TLC data repository when needed.
+
+The parquet files are cached locally to improve performance on subsequent requests for the same month's data.
+
+## Dependencies
+
+### Core Dependencies
+- FastAPI: Modern web framework for building APIs
+- Uvicorn: ASGI server for running FastAPI
+- Pandas: Data manipulation and analysis
+- PyArrow: Parquet file reading support
+- Requests: HTTP library for downloading data files
+- Loguru: Advanced logging library
+- Elasticsearch: Search and analytics engine for monitoring
+
+### Development Dependencies
+- Pytest: Testing framework
+- Ruff: Fast Python linter and formatter
+
+## Makefile Commands
+
+- `make install`: Install Poetry and project dependencies
+- `make run-dev`: Run API in development mode
+- `make build`: Build Docker image (multi-stage)
+- `make run`: Build and run Docker container
+- `make test`: Run test suite
+- `make lint`: Check and fix code style
+- `make format`: Format code
+- `make all`: Run lint, format, test, build, and run
+- `make health-check-local`: Check API health
+- `make sample-request-local`: Send sample API request
+- `make start-infra`: Start Elasticsearch and Kibana
+- `make stop-infra`: Stop Elasticsearch and Kibana
+
+## License
+
+This project is provided as-is for educational and demonstration purposes.
